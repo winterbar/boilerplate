@@ -1,4 +1,6 @@
 const mongoose = require('mongoose'); // Mongoose 라이브러리 로드
+const bcrypt = require('bcrypt');
+const saltRounds = 10; // 생성되는 salt의 자리수
 
 const userSchema = mongoose.Schema({ // Mongoose 스키마 선언
     name: {
@@ -28,6 +30,19 @@ const userSchema = mongoose.Schema({ // Mongoose 스키마 선언
     },
     tokenExp: { // 토큰 유효 기간
         type: Number
+    }
+});
+
+userSchema.pre('save', async function() {
+    var user = this;
+    if(user.isModified('password')) {
+        try {
+            const salt = await bcrypt.genSalt(saltRounds);
+            const hash = await bcrypt.hash(user.password, salt);
+            user.password = hash;
+        } catch (err) {
+            throw err;
+        }
     }
 });
 
