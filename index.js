@@ -6,12 +6,16 @@ const cookieParser = require('cookie-parser');
 const { User } = require('./models/User');
 
 const config = require('./config/key');
+const { auth } = require('./middleware/auth');
 
 // application/x-www-form-urlencoded 데이터를 분석하여 가져올 수 있도록 하는 코드
 app.use(bodyParser.urlencoded({extended: true}));
 
 // application/json 데이터를 분석하여 가져올 수 있도록 하는 코드
 app.use(bodyParser.json());
+
+// 쿠키 데이터를 분석하여 가져올 수 있는 코드
+app.use(cookieParser());
 
 const mongoose = require('mongoose');
 mongoose.connect(config.mongoURI)
@@ -22,7 +26,7 @@ app.get('/', (req, res) => {
   res.send('정말 재미있는 Node.js~ 여러분도 함께해요!');
 });
 
-app.post('/register', async (req, res) => {
+app.post('/api/users/register', async (req, res) => {
   // 회원 가입할 때 필요한 정보들을 client에서 가져오면
   // 그것들을 데이터베이스에 넣어준다.
   const user = new User(req.body);
@@ -36,7 +40,7 @@ app.post('/register', async (req, res) => {
 
 });
 
-app.post("/login", async (req, res) => {
+app.post("/api/users/login", async (req, res) => {
   try {
     // 요청된 이메일을 데이터베이스에서 있는지 확인한다.
     const user = await User.findOne({ email: req.body.email });
@@ -65,6 +69,19 @@ app.post("/login", async (req, res) => {
     return res.status(400).json({ loginSuccess: false, err})
   }
 });
+
+app.get('/api/users/auth', auth, async (req, res) => {
+  res.status(200).json({
+    _id: req.user._id,
+    isAdmin: req.user.role === 0 ? false : true,
+    isAuth: true,
+    email: req.user.email,
+    name: req.user.name,
+    lastname: req.user.lastname,
+    role: req.user.role,
+    image: req.user.image
+  });
+})
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
