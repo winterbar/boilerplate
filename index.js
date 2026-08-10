@@ -83,6 +83,15 @@ app.get('/api/users/auth', auth, async (req, res) => {
   });
 })
 
+app.get('/api/users/logout', auth, async (req, res) => {
+  try {
+    await User.findOneAndUpdate( {_id: req.user._id }, { token: "" })
+    return res.status(200).send({ success: true });
+  } catch (err) {
+    return res.json({ success: false, err});
+  }
+});
+
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
