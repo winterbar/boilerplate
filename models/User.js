@@ -1,6 +1,7 @@
 const mongoose = require('mongoose'); // Mongoose 라이브러리 로드
 const bcrypt = require('bcrypt');
 const saltRounds = 10; // 생성되는 salt의 자리수
+const jwt = require('jsonwebtoken');
 
 const userSchema = mongoose.Schema({ // Mongoose 스키마 선언
     name: {
@@ -45,6 +46,33 @@ userSchema.pre('save', async function() {
         }
     }
 });
+
+userSchema.methods.comparePassword = async function(plainPassword) {
+    try {
+        // bcrypt.compare는 promise를 지원하므로 await 사용 가능
+        const isMatch = await bcrypt.compare(plainPassword, this.password);
+        return isMatch;
+    } catch (err) {
+        throw err;
+    }
+}
+
+userSchema.methods.generateToken = async function() {
+    // jsonwebtoken을 이용해서 토큰을 생성
+    var user = this;
+    var token = jwt.sign(user._id.toHexString(), 'secretToken');
+    // user._id + secretToken => 토큰 생성. 이후 secretToken으로 user._id를 찾을 수 있다.
+    // 따라서 secretToken을 기억해줘야 한다.
+    user.token = token;
+
+    // user.save도 promise를 반환하므로 await 사용
+    try {
+        await user.save();
+        return user;
+    } catch (err) {
+        throw err;
+    }
+}
 
 const User = mongoose.model('User', userSchema);
 

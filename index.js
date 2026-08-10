@@ -2,6 +2,7 @@ const express = require('express');
 const app = express();
 const port = 5000;
 const bodyParser = require('body-parser');
+const cookieParser = require('cookie-parser');
 const { User } = require('./models/User');
 
 const config = require('./config/key');
@@ -33,6 +34,36 @@ app.post('/register', async (req, res) => {
     return res.json({ success: false, err });
   }
 
+});
+
+app.post("/login", async (req, res) => {
+  try {
+    // 요청된 이메일을 데이터베이스에서 있는지 확인한다.
+    const user = await User.findOne({ email: req.body.email });
+    if(!user) {
+      return res.json({
+        loginSuccess: false,
+        message: "제공된 이메일에 해당하는 유저가 없습니다."
+      });
+    }
+    // 요청된 이메일이 데이터베이스에 있다면 비밀번호가 맞는지 확인한다.
+    const isMatch = await user.comparePassword(req.body.password);
+    if(!isMatch) {
+      return res.json({
+        loginSuccess: false,
+        message: "비밀번호가 틀렸습니다."
+      });
+    }
+    // 비밀번호까지 맞다면 토큰을 생성한다.
+    const updateUser = await user.generateToken();
+    // 토큰을 저장한다. 어디에? 쿠키, 로컬 스토리지, 세션 등에 저장한다.
+    // 어디가 안전한지는 여러가지 의견이 있다. 일단 여기 실습에서는 쿠키에 저장한다.
+    return res.cookie("x_auth", updateUser.token)
+      .status(200)
+      .json({ loginSuccess: true, userId: updateUser._id });
+  } catch (err) {
+    return res.status(400).json({ loginSuccess: false, err})
+  }
 });
 
 app.listen(port, () => {
